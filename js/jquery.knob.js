@@ -87,15 +87,11 @@
                     stopper : true,
                     readOnly : this.$.data('readonly'),
 
-                    // UI
-                    cursor : (this.$.data('cursor') === true && 30)
-                                || this.$.data('cursor')
-                                || 0,
-                    thickness : this.$.data('thickness') || 0.35,
+                    thickness : this.$.data('thickness') || 0.5,
                     width : this.$.data('width') || 200,
                     height : this.$.data('height') || 200,
-                    displayInput : this.$.data('displayinput') == null || this.$.data('displayinput'),
-                    displayPrevious : this.$.data('displayprevious'),
+                    // displayInput : this.$.data('displayinput') == null || this.$.data('displayinput'),
+                    displayPrevious : true,//this.$.data('displayprevious'),
                     fgColor : this.$.data('fgcolor') || '#87CEEB',
                     inline : false,
 
@@ -201,107 +197,6 @@
             c = null;
         };
 
-        this._touch = function (e) {
-
-            var touchMove = function (e) {
-
-                var v = s.xy2val(
-                            e.originalEvent.touches[s.t].pageX,
-                            e.originalEvent.touches[s.t].pageY
-                            );
-
-                if (v == s.cv) return;
-
-                if (
-                    s.cH
-                    && (s.cH(v) === false)
-                ) return;
-
-
-                s.change(v);
-                s._draw();
-            };
-
-            // get touches index
-            this.t = k.c.t(e);
-
-            // First touch
-            touchMove(e);
-
-            // Touch events listeners
-            k.c.d
-                .bind("touchmove.k", touchMove)
-                .bind(
-                    "touchend.k"
-                    , function () {
-                        k.c.d.unbind('touchmove.k touchend.k');
-
-                        if (
-                            s.rH
-                            && (s.rH(s.cv) === false)
-                        ) return;
-
-                        s.val(s.cv);
-                    }
-                );
-
-            return this;
-        };
-
-        this._mouse = function (e) {
-
-            var mouseMove = function (e) {
-                var v = s.xy2val(e.pageX, e.pageY);
-                if (v == s.cv) return;
-
-                if (
-                    s.cH
-                    && (s.cH(v) === false)
-                ) return;
-
-                s.change(v);
-                s._draw();
-            };
-
-            // First click
-            mouseMove(e);
-
-            // Mouse events listeners
-            k.c.d
-                .bind("mousemove.k", mouseMove)
-                .bind(
-                    // Escape key cancel current change
-                    "keyup.k"
-                    , function (e) {
-                        if (e.keyCode === 27) {
-                            k.c.d.unbind("mouseup.k mousemove.k keyup.k");
-
-                            if (
-                                s.eH
-                                && (s.eH() === false)
-                            ) return;
-
-                            s.cancel();
-                        }
-                    }
-                )
-                .bind(
-                    "mouseup.k"
-                    , function (e) {
-                        k.c.d.unbind('mousemove.k mouseup.k keyup.k');
-
-                        if (
-                            s.rH
-                            && (s.rH(s.cv) === false)
-                        ) return;
-
-                        s.val(s.cv);
-                    }
-                );
-
-            return this;
-        };
-
         this._xy = function () {
             var o = this.$c.offset();
             this.x = o.left;
@@ -310,28 +205,6 @@
         };
 
         this._listen = function () {
-
-            if (!this.o.readOnly) {
-                this.$c
-                    .bind(
-                        "mousedown"
-                        , function (e) {
-                            e.preventDefault();
-                            s._xy()._mouse(e);
-                         }
-                    )
-                    .bind(
-                        "touchstart"
-                        , function (e) {
-                            e.preventDefault();
-                            s._xy()._touch(e);
-                         }
-                    );
-                this.listen();
-            } else {
-                this.$.attr('readonly', 'readonly');
-            }
-
             return this;
         };
 
@@ -344,7 +217,7 @@
             if (this.o.release) this.rH = this.o.release;
 
             if (this.o.displayPrevious) {
-                this.pColor = this.h2rgba(this.o.fgColor, "0.4");
+                this.pColor = this.h2rgba(this.o.pColor, "1");
                 this.fgColor = this.h2rgba(this.o.fgColor, "0.6");
             } else {
                 this.fgColor = this.o.fgColor;
@@ -401,8 +274,8 @@
             this.o = $.extend(
                 {
                     bgColor : this.$.data('bgcolor') || '#EEEEEE',
-                    angleOffset : this.$.data('angleoffset') || 0,
-                    angleArc : this.$.data('anglearc') || 360,
+                    angleOffset : this.$.data('angleoffset') || -135,
+                    angleArc : this.$.data('anglearc') || 270,
                     inline : true
                 }, this.o
             );
@@ -596,7 +469,7 @@
         this.draw = function () {
 
             var c = this.g,                 // context
-                a = this.angle(this.cv)    // Angle
+                a = this.angle(this.o.break0)    // Angle
                 , sat = this.startAngle     // Start angle
                 , eat = sat + a             // End angle
                 , sa, ea                    // Previous angles
@@ -614,11 +487,8 @@
             c.stroke();
 
             if (this.o.displayPrevious) {
-                ea = this.startAngle + this.angle(this.v);
+                ea = this.startAngle + this.angle(this.o.break1);
                 sa = this.startAngle;
-                this.o.cursor
-                    && (sa = ea - this.cursorExt)
-                    && (ea = ea + this.cursorExt);
 
                 c.beginPath();
                     c.strokeStyle = this.pColor;
@@ -627,6 +497,23 @@
                 r = (this.cv == this.v);
             }
 
+            if ( 1 ) {
+                var
+                  length = this.o.length,
+                  angle  = this.angle( this.o.line0 ),
+                  x = 1 / ( Math.tan( angle ) / Math.cos( angle ) ),
+                  y = 1 / ( Math.tan( angle ) * Math.sin( angle ) );
+                console.log(angle, x*length, y*length, this.xy, this.xy);
+                x *= length;
+                y *= length;
+                c.beginPath()
+                c.lineWidth = 5;
+                c.moveTo(this.xy, this.xy);
+                c.lineTo(this.xy + x, this.xy + y);
+                c.stroke();
+            }
+
+            c.lineWidth = this.lineWidth;
             c.beginPath();
                 c.strokeStyle = r ? this.o.fgColor : this.fgColor ;
                 c.arc(this.xy, this.xy, this.radius, sat, eat, false);
@@ -639,6 +526,14 @@
     };
 
     $.fn.dial = $.fn.knob = function (o) {
+        o = o || {};
+        o.fgColor = o.color0 || '#ff0077';
+        o.pColor  = o.color1 || '#f7dd77';
+        o.bgColor = o.color2 || '#aaee22';
+        o.break0  = o.break0 || 33;
+        o.break1  = o.break1 || 66;
+        o.length  = o.length || 20;
+        o.line0   = o.line0  || 30;
         return this.each(
             function () {
                 var d = new k.Dial();
